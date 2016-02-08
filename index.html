@@ -1,0 +1,118 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <title>GDP by country</title>
+    <style type="text/css">
+    	.gdp-map {height:500px; width:100%; margin:60px 0;}
+    	table {border-collapse:collapse;}
+    	table td {border:1px solid #000; padding:5px 10px;}
+    </style>
+</head>
+    <body>
+
+        <h1>GDP by country</h1>
+
+        <!-- Map goes here -->
+        <div class="gdp-map"></div>
+
+        <!-- Table goes here -->
+        <div class="gdp-table">
+        	<table>
+        		<thead>
+        			<tr>
+        				<th>Country name</th>
+        				<th>GDP</th>
+        			</tr>
+        		</thead>
+        		<tbody></tbody>
+        	</table>
+        </div>
+
+        <script src="https://ajax.googleapis.com/ajax/libs/jquery/1.12.0/jquery.min.js"></script>
+        <script async defer src="https://maps.googleapis.com/maps/api/js?key=AIzaSyCIEb6Zqeo4bLdCBKZQAoGKYpob8mvXUh0&callback=app.init"></script>
+        <script>
+        	var app = {
+
+        		dataRaw: null,
+        		dataParsed: [],
+        		map: null,
+        		geocoder: null,
+
+        		init: function() {
+        			this.loadData();
+
+        			this.geocoder = new google.maps.Geocoder();
+        			this.map = new google.maps.Map(document.querySelector('.gdp-map'), {
+        				center: {lat: 30, lng: 30},
+						zoom: 2
+  					});
+        		},
+        		loadData: function() {
+        			$.ajax({
+        				url: 'GDP.csv',
+        				type: 'GET',
+        				success: function(response) {
+        					app.dataRaw = response;
+        					app.parseData();
+        				}
+        			});
+        		},
+        		parseData: function() {
+        			var rows = this.dataRaw.split("\n");
+        			for (var i=0; i<rows.length; i++) {
+
+        				rowWithIntVal = rows[i].replace(/"([0-9, ]+)"/, function(match) {
+        					return parseInt(match.replace(/[^0-9]/g, '').trim());
+        				});
+
+        				var cols = rowWithIntVal.split(',');
+
+        				if (cols[0].match(/^[A-Z]{3}$/)) {
+        					this.dataParsed.push({
+	        					key: cols[0],
+	        					rank: cols[1],
+	        					name: cols[3],
+	        					gdp: cols[4]	
+	        				});
+        				}
+        				app.renderMarker(cols[3]);
+        			}
+        			this.renderTable();
+        		},
+        		renderMarker: function(country) {
+        			this.geocoder.geocode({address: country}, function(results, status) {
+        				if (status == google.maps.GeocoderStatus.OK) {
+        					var marker = new google.maps.Marker({
+								map: app.map,
+								position: results[0].geometry.location
+							});
+        				} else {
+        					console.log(status);
+        				}
+        			});
+        		},
+        		renderTable: function() {
+        			var tbody = document.querySelector('.gdp-table tbody');
+        			for (var i=0; i<this.dataParsed.length; i++) {
+        				
+        				var row = document.createElement('tr');
+        				var tdName = document.createElement('td');
+        				tdName.appendChild(document.createTextNode(this.dataParsed[i].name));
+
+        				var tdGDP = document.createElement('td');
+        				tdGDP.appendChild(document.createTextNode(this.dataParsed[i].gdp));
+
+        				row.appendChild(tdName);
+        				row.appendChild(tdGDP);
+        				tbody.appendChild(row);
+        			}
+        		}
+
+        	}
+
+        	//app.init();
+        </script>
+
+    </body>
+</html>
